@@ -1,17 +1,42 @@
+variable "region" {
+  type = string
+}
+variable "bucket_name" {
+  type = string
+}
+variable "kinesis_firehose_name" {
+  type = string
+}
+variable "public_key_name" {
+  type = string
+}
+variable "public_key_value" {
+  type = string
+}
+variable "firehose_buffer_interval" {
+  type = number
+}
+variable "kinesis_datastream_name" {
+  type = string
+}
+data "aws_caller_identity" "current" {}
+
+# ---
+
 provider "aws" {
-  region     = "us-east-1"
+  region = var.region
 }
 
 # create an S3 bucket
-resource "aws_s3_bucket" "bd" {
-  bucket = "tdk-bd.io"
-  acl    = "private"
+resource "aws_s3_bucket" "firehose_destination_bucket" {
+  bucket        = var.bucket_name
+  acl           = "private"
   force_destroy = true
 }
 
 # create an IAM role to allow firehose to access the S3 bucket
-resource "aws_iam_role" "firehose_role" {
-  name = "firehose_role"
+resource "aws_iam_role" "firehose_s3_role" {
+  name               = "firehose_s3_role"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -29,20 +54,25 @@ resource "aws_iam_role" "firehose_role" {
 EOF
 }
 
-# create permissions to allow ec2 access to firehose
-resource "aws_iam_role_policy" "s3_policy" {
-  name = "s3_policy"
-  role = "${aws_iam_role.firehose_role.id}"
+# create permissions to allow firehose to read/write and list objects in the S3 bucket
+resource "aws_iam_role_policy" "firehose_s3_role_policy" {
+  name   = "firehose_s3_role_policy"
+  role   = "${aws_iam_role.firehose_s3_role.id}"
   policy = <<EOF
 {
   "Version": "2012-10-17",
-  "Statement": [
+  "Statement": [    
     {
-      "Action": [
-        "s3:*"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
+        "Sid": "ListObjectsInBucket",
+        "Effect": "Allow",
+        "Action": ["s3:ListBucket"],
+        "Resource": ["arn:aws:s3:::${aws_s3_bucket.firehose_destination_bucket.bucket}"]
+    },
+    {
+        "Sid": "AllObjectActions",
+        "Effect": "Allow",
+        "Action": "s3:*Object",
+        "Resource": ["arn:aws:s3:::${aws_s3_bucket.firehose_destination_bucket.bucket}/*"]
     }
   ]
 }
@@ -50,20 +80,25 @@ EOF
 }
 
 # create the kinesis firehose
-resource "aws_kinesis_firehose_delivery_stream" "extended_s3_stream" {
-  name        = "PurchaseLogs"
+resource "aws_kinesis_firehose_delivery_stream" "PurchaseLogs_s3_firehose_stream" {
+  name        = var.kinesis_firehose_name
   destination = "extended_s3"
   extended_s3_configuration {
-    role_arn   = "${aws_iam_role.firehose_role.arn}"
-    bucket_arn = "${aws_s3_bucket.bd.arn}"
-    buffer_interval = 60
+    role_arn        = "${aws_iam_role.firehose_s3_role.arn}"
+    bucket_arn      = "${aws_s3_bucket.firehose_destination_bucket.arn}"
+    buffer_interval = var.firehose_buffer_interval
   }
 }
 
+resource "aws_kinesis_stream" "CadabraOrders_s3_kinesis_data_stream" {
+  name        = var.kinesis_datastream_name
+  shard_count = 1
+}
+
 # create the public key to connect to the ec2 instance
-resource "aws_key_pair" "ec2-key" {
-  key_name   = "ec2-key-tk"
-  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC9E7yCIHpNKaHXtzxFnKJPT+gtyXAnprq/pCfs/fPW+sXwAAFVsIt0rzEghkSshR8lUcyGJTafOFLPIAfSHirp2JdREtWa3CijokSHzaoSk2PrB8KzrX07l998lYGVgKzsOb8TmeLAeHR/vgwQ0r7r/17JOIRLrYcaghkrpwDt/GPVCxZa8TjQWiyX9Aw+QRP4IX6N65py5y2dsh7+GOS/rIlueRDx7YVEhzA8OvhiN2v0EW8QtdHhWU6uEOpuPF16sXYTImb73BnsjE+CZWrkjAlIp35hbuw1E2jZWAWnA10txc5VadjemPsPysCBMkEBYDl/DAdFQ0YlB5G3DKBD todd@tk"
+resource "aws_key_pair" "ec2_public_key" {
+  key_name   = var.public_key_name
+  public_key = var.public_key_value
 }
 
 # create an IAM instance profile to attach to the ec2 instance
@@ -74,8 +109,8 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 
 # create the IAM instance role
 resource "aws_iam_role" "ec2role" {
-  name = "ec2_role"
-  path = "/"
+  name               = "ec2_role"
+  path               = "/"
   assume_role_policy = <<EOF
 {
     "Version": "2012-10-17",
@@ -93,20 +128,49 @@ resource "aws_iam_role" "ec2role" {
 EOF
 }
 
-# create permissions to allow ec2 access to firehose
+# Policy to give permissions to write records to the firehose endpoint
 resource "aws_iam_role_policy" "firehose_policy" {
-  name = "firehose_policy"
-  role = "${aws_iam_role.ec2role.id}"
+  name   = "firehose_policy"
+  role   = "${aws_iam_role.ec2role.id}"
   policy = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
     {
       "Action": [
-        "firehose:*"
+        "firehose:PutRecord",
+        "firehose:PutRecordBatch"
       ],
       "Effect": "Allow",
-      "Resource": "*"
+      "Resource": ["arn:aws:firehose:${var.region}:${data.aws_caller_identity.current.account_id}:deliverystream/${aws_kinesis_firehose_delivery_stream.PurchaseLogs_s3_firehose_stream.name}"]
+    },
+    {
+      "Action": [
+        "cloudwatch:PutMetricData"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"      
+    }
+  ]
+}
+EOF
+}
+
+# Policy to give permissions to write records to the kinesis data stream endpoint
+resource "aws_iam_role_policy" "kinesis_datastream_policy" {
+  name   = "kinesis_datastream_policy"
+  role   = "${aws_iam_role.ec2role.id}"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "kinesis:PutRecord",
+        "kinesis:PutRecords"
+      ],
+      "Effect": "Allow",
+      "Resource": ["arn:aws:kinesis:${var.region}:${data.aws_caller_identity.current.account_id}:stream/${aws_kinesis_stream.CadabraOrders_s3_kinesis_data_stream.name}"]
     }
   ]
 }
@@ -114,26 +178,35 @@ EOF
 }
 
 # create an ec2 instance
-resource "aws_instance" "ec2inst" {
-  ami           = "ami-00eb20669e0990cb4"
-  instance_type = "t2.nano"
-  key_name      = "ec2-key-tk"
+resource "aws_spot_instance_request" "ec2_spot_inst" {
+  ami                  = "ami-00eb20669e0990cb4"
+  instance_type        = "t3.nano"
+  spot_price           = "0.0025"
+  spot_type            = "one-time"
+  availability_zone    = "us-east-1c"
+  key_name             = "ec2-key-tk"
   iam_instance_profile = "ec2_profile"
-  user_data     = <<EOF
+  depends_on           = [aws_kinesis_firehose_delivery_stream.PurchaseLogs_s3_firehose_stream]
+  # Copies the myapp.conf file to /etc/myapp.conf
+  user_data = <<EOF
 		#! /bin/bash
     sudo yum install -y aws-kinesis-agent
     wget http://media.sundog-soft.com/AWSBigData/LogGenerator.zip
     unzip LogGenerator.zip
     chmod a+x LogGenerator.py
     sudo mkdir /var/log/cadabra
-    # this endpoint doesn't work for some reason - leaving it blank works
-    #sudo sed -i -e 's/"firehose.endpoint": "",/"firehose.endpoint": "firehose.us-east1.amazonaws.com",/g' /etc/aws-kinesis/agent.json
+    # remove the Kinesis Data Streams configuration
     sudo sed -i '7,11d' /etc/aws-kinesis/agent.json
+    # add the configuration for kinesis
+    sed -i '7i{"filePattern": "/var/log/cadabra/*.log","kinesisStream": "CadabraOrders","partitionKeyOption": "RANDOM","dataProcessingOptions": [ { "optionName": "CSVTOJSON", "customFieldNames": ["InvoiceNo", "StockCode", "Description", "Quantity", "InvoiceDate", "UnitPrice", "Customer", "Country"] } ]  },' /etc/aws-kinesis/agent.json 
+    # set up the cadabra log directory
     sudo sed -i -e 's/\/tmp\/app.log*/\/var\/log\/cadabra\/*.log/g' /etc/aws-kinesis/agent.json
+    # configure the Kinesis Firehose target
     sudo sed -i -e 's/yourdeliverystream/PurchaseLogs/g' /etc/aws-kinesis/agent.json
+    # enable the Kinesis agent then set it to auto-start
     sudo service aws-kinesis-agent start
     sudo chkconfig aws-kinesis-agent on
-    sleep 120
+    sleep 60
     cd / && sudo python LogGenerator.py 500
-	EOF
+EOF
 }

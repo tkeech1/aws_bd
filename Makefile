@@ -3,8 +3,11 @@ AWS_ACCESS_KEY_ID?=AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY?=AWS_SECRET_ACCESS_KEY
 AWS_REGION?=AWS_REGION
 
+plan:
+	terraform init; terraform validate; terraform plan
+
 apply:
-	terraform init; terraform apply -auto-approve
+	terraform init; terraform fmt; terraform apply -auto-approve
 
 destroy:
 	terraform init; terraform destroy -auto-approve

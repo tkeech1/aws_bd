@@ -104,5 +104,6 @@ venv.bak/
 .mypy_cache/
 
 .terraform/
+.terraform*
 terraform.tfstate
 terraform.tfstate.backup
