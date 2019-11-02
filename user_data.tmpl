@@ -1,0 +1,44 @@
+#! /bin/bash
+yum install -y aws-kinesis-agent
+pip install boto3
+
+# create AWS credential files to use with boto3
+mkdir -p /home/ec2-user/.aws
+touch /home/ec2-user/.aws/credentials
+echo [default] > /home/ec2-user/.aws/credentials
+echo aws_access_key_id=${aws_access_key_id} >> /home/ec2-user/.aws/credentials
+echo aws_secret_access_key=${aws_secret_access_key} >> /home/ec2-user/.aws/credentials
+touch /home/ec2-user/.aws/config
+echo [default] > /home/ec2-user/.aws/config
+echo region=${aws_region} >> /home/ec2-user/.aws/config
+chown -R ec2-user.ec2-user /home/ec2-user/.aws
+
+# download the consumer script
+wget http://media.sundog-soft.com/AWSBigData/Consumer.py
+chmod a+x Consumer.py
+touch consumer.log
+chown -R ec2-user.ec2-user /consumer.log
+su ec2-user bash -c "python Consumer.py > consumer.log &"
+
+# download the producer software
+wget http://media.sundog-soft.com/AWSBigData/LogGenerator.zip
+unzip LogGenerator.zip
+chmod a+x LogGenerator.py
+mkdir /var/log/cadabra
+
+# configure the Kinesis agent
+# remove the Kinesis Data Streams configuration from the agent.json file
+sed -i '7,11d' /etc/aws-kinesis/agent.json
+# add the configuration for kinesis data streams
+sed -i '7i{"filePattern": "/var/log/cadabra/*.log","kinesisStream": "CadabraOrders","partitionKeyOption": "RANDOM","dataProcessingOptions": [ { "optionName": "CSVTOJSON", "customFieldNames": ["InvoiceNo", "StockCode", "Description", "Quantity", "InvoiceDate", "UnitPrice", "Customer", "Country"] } ]  },' /etc/aws-kinesis/agent.json 
+# set up the cadabra log directory in the agent config
+sed -i -e 's/\/tmp\/app.log*/\/var\/log\/cadabra\/*.log/g' /etc/aws-kinesis/agent.json
+# configure the Kinesis Firehose target
+sed -i -e 's/yourdeliverystream/PurchaseLogs/g' /etc/aws-kinesis/agent.json
+# enable the Kinesis agent then set it to auto-start
+service aws-kinesis-agent start
+chkconfig aws-kinesis-agent on
+sleep 60
+
+# run the LogGenerator to produce some data to the stream
+python LogGenerator.py 10
