@@ -16,6 +16,7 @@ RUN groupadd --gid $USER_GID $USERNAME \
 # ********************************************************
 
 RUN curl -L https://releases.hashicorp.com/terraform/0.12.12/terraform_0.12.12_linux_amd64.zip -o /tmp/tf.zip; unzip /tmp/tf.zip -d /usr/local/bin/; rm /tmp/tf.zip
+RUN apt update && apt install zip -y && rm -rf /var/lib/apt/lists/*
 
 # change the username
 USER $USERNAME

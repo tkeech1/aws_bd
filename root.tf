@@ -34,6 +34,9 @@ variable "firehose_buffer_interval" {
 variable "kinesis_datastream_name" {
   type = string
 }
+variable "lambda_kinesis_processor_name" {
+  type = string
+}
 data "aws_caller_identity" "current" {}
 
 provider "aws" {

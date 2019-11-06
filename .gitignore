@@ -107,3 +107,4 @@ venv.bak/
 .terraform*
 terraform.tfstate
 terraform.tfstate.backup
+*.zip

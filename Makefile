@@ -15,3 +15,7 @@ destroy:
 ssh:
 	ssh ec2-user@ec2-52-201-246-6.compute-1.amazonaws.com
 
+create_lambda_deployment_package:
+	rm function.zip || true
+	zip function.zip lambda-function.py
+
