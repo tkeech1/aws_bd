@@ -1,0 +1,17 @@
+
+# Spark sample application
+
+# ssh to EMR as hadoop
+ssh hadopop@XXX
+
+# copy the spark sample script to the home directory
+cp /usr/lib/spark/examples/src/main/python/ml/als_example.py .
+
+# create a directory in the hdfs filesystem
+hadoop fs -mkdir -p /user/hadoop/data/mllib/als
+
+# copy sample data to the hdfs file system
+hadoop fs -copyFromLocal /usr/lib/spark/data/mllib/als/sample_movielens_ratings.txt /user/hadoop/data/mllib/als/sample_movielens_ratings.txt
+
+# run the sample script
+spark-submit als_example.py

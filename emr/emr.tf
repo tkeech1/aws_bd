@@ -1,6 +1,9 @@
 variable "region" {
   type = string
 }
+variable "public_key_name" {
+  type = string
+}
 
 provider "aws" {
   region = var.region
@@ -16,6 +19,7 @@ resource "aws_emr_cluster" "cluster" {
     emr_managed_master_security_group = "${aws_security_group.allow_access.id}"
     emr_managed_slave_security_group  = "${aws_security_group.allow_access.id}"
     instance_profile                  = "${aws_iam_instance_profile.emr_profile.arn}"
+    key_name                          = "${var.public_key_name}"
   }
 
   master_instance_type = "m4.large"
@@ -26,11 +30,11 @@ resource "aws_emr_cluster" "cluster" {
     name = "emr_test"
   }
 
-  /*bootstrap_action {
+  bootstrap_action {
     path = "s3://elasticmapreduce/bootstrap-actions/run-if"
     name = "runif"
-    args = ["instance.isMaster=true", "echo running on master node"]
-  }*/
+    args = ["instance.isMaster=true", "wget --directory-prefix=/home/hadoop/ https://raw.githubusercontent.com/tkeech1/aws_bd/master/als_example.py; chown -R hadoop.hadoop /home/hadoop/als_example.py"]
+  }
 
   /*configurations_json = <<EOF
   [
@@ -275,8 +279,6 @@ resource "aws_iam_role_policy" "iam_emr_profile_policy" {
         "Resource": "*",
         "Action": [
             "cloudwatch:*",
-            "dynamodb:*",
-            "ec2:Describe*",
             "elasticmapreduce:Describe*",
             "elasticmapreduce:ListBootstrapActions",
             "elasticmapreduce:ListClusters",
@@ -292,10 +294,7 @@ resource "aws_iam_role_policy" "iam_emr_profile_policy" {
             "kinesis:PutRecord",
             "kinesis:SplitShard",
             "rds:Describe*",
-            "s3:*",
-            "sdb:*",
-            "sns:*",
-            "sqs:*"
+            "s3:*"
         ]
     }]
 }

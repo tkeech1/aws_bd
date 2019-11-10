@@ -18,6 +18,7 @@ wget http://media.sundog-soft.com/AWSBigData/Consumer.py
 chmod a+x Consumer.py
 touch consumer.log
 chown -R ec2-user.ec2-user /consumer.log
+# comment the following line out so the lambda function moves the data to S3 instead of kinesis firehose
 #su ec2-user bash -c "python Consumer.py > consumer.log &"
 
 # download the producer software
