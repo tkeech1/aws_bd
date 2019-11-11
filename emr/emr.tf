@@ -33,7 +33,7 @@ resource "aws_emr_cluster" "cluster" {
   bootstrap_action {
     path = "s3://elasticmapreduce/bootstrap-actions/run-if"
     name = "runif"
-    args = ["instance.isMaster=true", "wget --directory-prefix=/home/hadoop/ https://raw.githubusercontent.com/tkeech1/aws_bd/master/als_example.py; chown -R hadoop.hadoop /home/hadoop/als_example.py"]
+    args = ["instance.isMaster=true", "wget --directory-prefix=/home/hadoop/ https://raw.githubusercontent.com/tkeech1/aws_bd/master/emr/als_example.py"]
   }
 
   /*configurations_json = <<EOF
