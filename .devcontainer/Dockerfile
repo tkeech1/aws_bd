@@ -20,4 +20,4 @@ RUN apt update && apt install zip -y && rm -rf /var/lib/apt/lists/*
 
 # change the username
 USER $USERNAME
-RUN pip install awscli --upgrade --user
+RUN pip install awscli pylint autopep8 --upgrade --user
