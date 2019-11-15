@@ -186,8 +186,60 @@ resource "aws_iam_policy" "lambda_logging" {
 EOF
 }
 
+# allows a service to access the Kinesis stream
+resource "aws_iam_policy" "kinesis_policy" {
+  name        = "kinesis_policy"
+  path        = "/"
+  description = "IAM policy for access to the Cadabra stream"
+
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Action": [
+                "kinesis:Get*",
+                "kinesis:List*",
+                "kinesis:Describe*"
+            ],
+            "Resource": ["arn:aws:kinesis:${var.region}:${data.aws_caller_identity.current.account_id}:stream/${aws_kinesis_stream.CadabraOrders_s3_kinesis_data_stream.name}"]
+        }
+    ]
+}
+EOF
+}
+
 # attaches the logging policy to the lambda role
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
   role       = "${aws_iam_role.lambda_role.name}"
   policy_arn = "${aws_iam_policy.lambda_logging.arn}"
+}
+
+
+# create the IAM instance role for kinesis analytics
+resource "aws_iam_role" "kinesisanalytics_role" {
+  name               = "kinesisanalytics_role"
+  path               = "/"
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "kinesisanalytics.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
+
+# attaches the kinesis stream policy to the kinesis analytics role
+resource "aws_iam_role_policy_attachment" "kinesis_analytics_kinesis_stream" {
+  role       = "${aws_iam_role.kinesisanalytics_role.name}"
+  policy_arn = "${aws_iam_policy.kinesis_policy.arn}"
 }

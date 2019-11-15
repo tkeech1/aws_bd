@@ -66,4 +66,7 @@ resource "aws_kinesis_stream" "CadabraOrders_s3_kinesis_data_stream" {
   shard_count = 1
 }
 
-
+resource "aws_kinesis_stream" "OrderRateAlarms_kinesis_data_stream" {
+  name        = var.kinesis_alarm_datastream_name
+  shard_count = 1
+}

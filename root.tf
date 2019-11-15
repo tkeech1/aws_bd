@@ -34,6 +34,12 @@ variable "firehose_buffer_interval" {
 variable "kinesis_datastream_name" {
   type = string
 }
+variable "kinesis_alarm_datastream_name" {
+  type = string
+}
+variable "kinesis_analytics_application_name" {
+  type = string
+}
 variable "lambda_kinesis_processor_name" {
   type = string
 }
