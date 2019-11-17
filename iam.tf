@@ -186,6 +186,31 @@ resource "aws_iam_policy" "lambda_logging" {
 EOF
 }
 
+# allows a service to write to the alarm stream
+resource "aws_iam_policy" "alarm_stream_policy" {
+  name        = "alarm_stream_policy"
+  path        = "/"
+  description = "IAM policy for writing to the alarm stream"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "kinesis:PutRecord",
+        "kinesis:PutRecords",
+        "kinesis:GetRecords",
+        "kinesis:GetRecord"
+      ],
+      "Effect": "Allow",
+      "Resource": ["arn:aws:kinesis:${var.region}:${data.aws_caller_identity.current.account_id}:stream/${aws_kinesis_stream.OrderRateAlarms_kinesis_data_stream.name}"]
+    }
+  ]
+}
+EOF
+}
+
 # allows a service to access the Kinesis stream
 resource "aws_iam_policy" "kinesis_policy" {
   name        = "kinesis_policy"
@@ -242,4 +267,10 @@ EOF
 resource "aws_iam_role_policy_attachment" "kinesis_analytics_kinesis_stream" {
   role       = "${aws_iam_role.kinesisanalytics_role.name}"
   policy_arn = "${aws_iam_policy.kinesis_policy.arn}"
+}
+
+# attaches the kinesis stream policy to the kinesis analytics role
+resource "aws_iam_role_policy_attachment" "kinesis_analytics_alarm_stream" {
+  role       = "${aws_iam_role.kinesisanalytics_role.name}"
+  policy_arn = "${aws_iam_policy.alarm_stream_policy.arn}"
 }

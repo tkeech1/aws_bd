@@ -23,7 +23,7 @@
         "-e",
         "AWS_SECRET_ACCESS_KEY=${env:AWS_SECRET_ACCESS_KEY}",
         "-e",
-        "AWS_REGION=${env:AWS_REGION}"
+        "AWS_DEFAULT_REGION=${env:AWS_REGION}"
     ],
     "appPort": [],
     // Use 'settings' to set *default* container specific settings.json values on container create. 
