@@ -18,8 +18,12 @@ wget http://media.sundog-soft.com/AWSBigData/Consumer.py
 chmod a+x Consumer.py
 touch consumer.log
 chown -R ec2-user.ec2-user /consumer.log
-# comment the following line out so the lambda function moves the data to S3 instead of kinesis firehose
-#su ec2-user bash -c "python Consumer.py > consumer.log &"
+# There are two ways to get stream data into DynamoDB.
+# The first is to run the Consumer.py script as shown below. This script monitors the 
+# Kinesis stream and writes any data it finds to DynamoDB
+# The second is to create a Lambda that monitors the Kinesis stream and does the same. 
+# Comment the following line out so the lambda function moves the data to S3 instead of the Consumer script. 
+# su ec2-user bash -c "python Consumer.py > consumer.log &"
 
 # download the producer software
 wget http://media.sundog-soft.com/AWSBigData/LogGenerator.zip
@@ -42,4 +46,4 @@ chkconfig aws-kinesis-agent on
 sleep 60
 
 # run the LogGenerator to produce some data to the stream
-python LogGenerator.py 10
+while true; do python LogGenerator.py 100; sleep 10; done

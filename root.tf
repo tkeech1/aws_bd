@@ -22,6 +22,9 @@ variable "aws_access_key_id" {
 variable "aws_secret_access_key" {
   type = string
 }
+variable "cell_phone_number" {
+  type = string
+}
 variable "bucket_name" {
   type = string
 }
@@ -41,6 +44,12 @@ variable "kinesis_analytics_application_name" {
   type = string
 }
 variable "lambda_kinesis_processor_name" {
+  type = string
+}
+variable "lambda_kinesis_sns_processor_name" {
+  type = string
+}
+variable "sns_topic_name" {
   type = string
 }
 data "aws_caller_identity" "current" {}

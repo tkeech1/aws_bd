@@ -131,7 +131,10 @@ resource "aws_iam_role_policy" "lambda_kinesis_policy" {
                 "kinesis:List*",
                 "kinesis:Describe*"
             ],
-            "Resource": ["arn:aws:kinesis:${var.region}:${data.aws_caller_identity.current.account_id}:stream/${aws_kinesis_stream.CadabraOrders_s3_kinesis_data_stream.name}"]
+            "Resource": [
+              "arn:aws:kinesis:${var.region}:${data.aws_caller_identity.current.account_id}:stream/${aws_kinesis_stream.CadabraOrders_s3_kinesis_data_stream.name}",
+              "arn:aws:kinesis:${var.region}:${data.aws_caller_identity.current.account_id}:stream/${aws_kinesis_stream.OrderRateAlarms_kinesis_data_stream.name}"
+            ]
         }
     ]
 }
@@ -236,12 +239,38 @@ resource "aws_iam_policy" "kinesis_policy" {
 EOF
 }
 
+# allows a service to access SNS
+resource "aws_iam_policy" "sns_policy" {
+  name        = "sns_policy"
+  path        = "/"
+  description = "IAM policy for access to SNS"
+
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+    {
+      "Sid": "",
+      "Action": "sns:*",
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
 # attaches the logging policy to the lambda role
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
   role       = "${aws_iam_role.lambda_role.name}"
   policy_arn = "${aws_iam_policy.lambda_logging.arn}"
 }
 
+# attaches the sns policy to the lambda role
+resource "aws_iam_role_policy_attachment" "lambda_sns" {
+  role       = "${aws_iam_role.lambda_role.name}"
+  policy_arn = "${aws_iam_policy.sns_policy.arn}"
+}
 
 # create the IAM instance role for kinesis analytics
 resource "aws_iam_role" "kinesisanalytics_role" {
