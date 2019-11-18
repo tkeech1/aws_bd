@@ -11,10 +11,14 @@ There are several workflows included in this repository.
 6) A Lambda function monitors the alarm stream and creates SNS notifications (text message) when if finds data in the alarm stream. 
 
 **The following environment variables need to be set locally:**
-```AWS_ACCESS_KEY_ID
+```
+AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY
 AWS_REGION
-CELL_PHONE_NUMBER```
+CELL_PHONE_NUMBER
+```
 
 To run:
-```make apply start-kinesis-analytics```
+```
+make apply start-kinesis-analytics
+```
