@@ -25,7 +25,9 @@
         "-e",
         "AWS_DEFAULT_REGION=${env:AWS_REGION}",
         "-e",
-        "CELL_PHONE_NUMBER=${env:CELL_PHONE_NUMBER}"
+        "CELL_PHONE_NUMBER=${env:CELL_PHONE_NUMBER}",
+        "-e",
+        "IP_ADDRESS=${env:IP_ADDRESS}"
     ],
     "appPort": [],
     // Use 'settings' to set *default* container specific settings.json values on container create. 

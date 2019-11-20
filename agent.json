@@ -1,0 +1,36 @@
+{
+    "cloudwatch.emitMetrics": true,
+    "kinesis.endpoint": "",
+    "firehose.endpoint": "",
+    "flows": [
+        {
+            "filePattern": "/var/log/cadabra/*.log",
+            "kinesisStream": "CadabraOrders",
+            "partitionKeyOption": "RANDOM",
+            "dataProcessingOptions": [
+                {
+                    "optionName": "CSVTOJSON",
+                    "customFieldNames": [
+                        "InvoiceNo",
+                        "StockCode",
+                        "Description",
+                        "Quantity",
+                        "InvoiceDate",
+                        "UnitPrice",
+                        "Customer",
+                        "Country"
+                    ]
+                }
+            ]
+        },
+        {
+            "filePattern": "/var/log/httpd/ssl_access*",
+            "deliveryStream": "weblogs",
+            "initialPosition": "START_OF_FILE"
+        },
+        {
+            "filePattern": "/var/log/cadabra/*.log*",
+            "deliveryStream": "PurchaseLogs"
+        }
+    ]
+}

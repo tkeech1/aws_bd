@@ -52,6 +52,18 @@ variable "lambda_kinesis_sns_processor_name" {
 variable "sns_topic_name" {
   type = string
 }
+variable "elasticsearch_domain_name" {
+  type = string
+}
+variable "client_ip_address" {
+  type = string
+}
+variable "kinesis_firehose_weblogs_name" {
+  type = string
+}
+variable "lambda_weblogs_processor_name" {
+  type = string
+}
 data "aws_caller_identity" "current" {}
 
 provider "aws" {

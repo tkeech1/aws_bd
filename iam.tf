@@ -189,6 +189,32 @@ resource "aws_iam_policy" "lambda_logging" {
 EOF
 }
 
+# allows a lambda to log to CloudWatch
+/*resource "aws_iam_policy" "lambda_weblogs" {
+  name        = "lambda_weblogs"
+  path        = "/"
+  description = "IAM policy for processing weblogs from a firehose"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "firehose:*",
+        "es:*"
+      ],
+      "Resource": [
+        "arn:aws:firehose:${var.region}:${data.aws_caller_identity.current.account_id}:deliverystream/${aws_kinesis_firehose_delivery_stream.weblogs_firehose_stream.name}",
+        "arn:aws:es:${var.region}:${data.aws_caller_identity.current.account_id}:domain/${aws_elasticsearch_domain.es[0].domain_name}"
+      ],
+      "Effect": "Allow"
+    }
+  ]
+}
+EOF
+}*/
+
 # allows a service to write to the alarm stream
 resource "aws_iam_policy" "alarm_stream_policy" {
   name        = "alarm_stream_policy"
@@ -271,6 +297,12 @@ resource "aws_iam_role_policy_attachment" "lambda_sns" {
   role       = "${aws_iam_role.lambda_role.name}"
   policy_arn = "${aws_iam_policy.sns_policy.arn}"
 }
+
+# attaches the sns policy to the lambda role
+/*resource "aws_iam_role_policy_attachment" "lambda_weblogs" {
+  role       = "${aws_iam_role.lambda_role.name}"
+  policy_arn = "${aws_iam_policy.lambda_weblogs.arn}"
+}*/
 
 # create the IAM instance role for kinesis analytics
 resource "aws_iam_role" "kinesisanalytics_role" {

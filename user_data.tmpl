@@ -31,15 +31,22 @@ unzip LogGenerator.zip
 chmod a+x LogGenerator.py
 mkdir /var/log/cadabra
 
+# download the http log files software - these are used to populate ElasticSearch
+wget http://media.sundog-soft.com/AWSBigData/httpd.zip
+unzip httpd.zip
+mv httpd /var/log/httpd
+
+# get the kinesis agent config file
+wget --directory-prefix=/stc/aws-kinesis/ https://raw.githubusercontent.com/tkeech1/aws_bd/master/agent.json
 # configure the Kinesis agent
 # remove the Kinesis Data Streams configuration from the agent.json file
-sed -i '7,11d' /etc/aws-kinesis/agent.json
+#sed -i '7,11d' /etc/aws-kinesis/agent.json
 # add the configuration for kinesis data streams
-sed -i '7i{"filePattern": "/var/log/cadabra/*.log","kinesisStream": "CadabraOrders","partitionKeyOption": "RANDOM","dataProcessingOptions": [ { "optionName": "CSVTOJSON", "customFieldNames": ["InvoiceNo", "StockCode", "Description", "Quantity", "InvoiceDate", "UnitPrice", "Customer", "Country"] } ]  },' /etc/aws-kinesis/agent.json 
+#sed -i '7i{"filePattern": "/var/log/cadabra/*.log","kinesisStream": "CadabraOrders","partitionKeyOption": "RANDOM","dataProcessingOptions": [ { "optionName": "CSVTOJSON", "customFieldNames": ["InvoiceNo", "StockCode", "Description", "Quantity", "InvoiceDate", "UnitPrice", "Customer", "Country"] } ]  },' /etc/aws-kinesis/agent.json 
 # set up the cadabra log directory in the agent config
-sed -i -e 's/\/tmp\/app.log*/\/var\/log\/cadabra\/*.log/g' /etc/aws-kinesis/agent.json
+#sed -i -e 's/\/tmp\/app.log*/\/var\/log\/cadabra\/*.log/g' /etc/aws-kinesis/agent.json
 # configure the Kinesis Firehose target
-sed -i -e 's/yourdeliverystream/PurchaseLogs/g' /etc/aws-kinesis/agent.json
+#sed -i -e 's/yourdeliverystream/PurchaseLogs/g' /etc/aws-kinesis/agent.json
 # enable the Kinesis agent then set it to auto-start
 service aws-kinesis-agent start
 chkconfig aws-kinesis-agent on
