@@ -53,13 +53,7 @@ resource "aws_iam_role_policy" "firehose_s3_role_policy" {
         "Effect": "Allow",
         "Action": "s3:*Object",
         "Resource": ["arn:aws:s3:::${aws_s3_bucket.firehose_destination_bucket.bucket}/*"]
-    }
-  ]
-}
-EOF
-}
-
-/*,
+    },
     {
         "Sid": "",
         "Effect": "Allow",
@@ -67,7 +61,17 @@ EOF
         "Resource": [
           "arn:aws:es:${var.region}:${data.aws_caller_identity.current.account_id}:domain/${aws_elasticsearch_domain.es[0].domain_name}",
           "arn:aws:es:${var.region}:${data.aws_caller_identity.current.account_id}:domain/${aws_elasticsearch_domain.es[0].domain_name}/*"]
-    }*/
+    },
+        {
+        "Sid": "",
+        "Effect": "Allow",
+        "Action": "lambda:*",
+        "Resource": ["*"]
+    }
+  ]
+}
+EOF
+}
 
 # create the kinesis firehose
 resource "aws_kinesis_firehose_delivery_stream" "PurchaseLogs_s3_firehose_stream" {
@@ -81,7 +85,7 @@ resource "aws_kinesis_firehose_delivery_stream" "PurchaseLogs_s3_firehose_stream
 }
 
 # create the kinesis firehose for writing to elastic search
-/*resource "aws_kinesis_firehose_delivery_stream" "weblogs_firehose_stream" {
+resource "aws_kinesis_firehose_delivery_stream" "weblogs_firehose_stream" {
   name        = var.kinesis_firehose_weblogs_name
   destination = "elasticsearch"
   s3_configuration {
@@ -106,8 +110,18 @@ resource "aws_kinesis_firehose_delivery_stream" "PurchaseLogs_s3_firehose_stream
         }
       }
     }
+    cloudwatch_logging_options {
+      enabled         = true
+      log_group_name  = "${aws_cloudwatch_log_group.weblog_firehose_processor_log.name}"
+      log_stream_name = "weblogs_firehose_stream"
+    }
   }
-}*/
+}
+
+resource "aws_cloudwatch_log_group" "weblog_firehose_processor_log" {
+  name              = "/aws/firehose/weblog"
+  retention_in_days = 14
+}
 
 resource "aws_kinesis_stream" "CadabraOrders_s3_kinesis_data_stream" {
   name        = var.kinesis_datastream_name

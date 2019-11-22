@@ -64,13 +64,13 @@ resource "aws_cloudwatch_log_group" "kinesis_sns_processor_log" {
   retention_in_days = 14
 }
 
-
 # create a lambda for weblogs processing
 resource "aws_lambda_function" "lambda_weblogs_processor" {
   filename      = "function-weblog.zip"
   function_name = var.lambda_weblogs_processor_name
   role          = "${aws_iam_role.lambda_role.arn}"
   handler       = "lambda_log_transform.handler"
+  timeout       = "60"
 
   # The filebase64sha256() function is available in Terraform 0.11.12 and later
   # For Terraform 0.11.11 and earlier, use the base64sha256() function and the file() function:
@@ -79,4 +79,11 @@ resource "aws_lambda_function" "lambda_weblogs_processor" {
 
   runtime    = "nodejs10.x"
   depends_on = ["aws_iam_role_policy_attachment.lambda_logs", "aws_cloudwatch_log_group.kinesis_processor_log"]
+}
+
+# This is to optionally manage the CloudWatch Log Group for the Lambda Function.
+# If skipping this resource configuration, also add "logs:CreateLogGroup" to the IAM policy below.
+resource "aws_cloudwatch_log_group" "weblog_processor_log" {
+  name              = "/aws/lambda/${var.lambda_weblogs_processor_name}"
+  retention_in_days = 14
 }

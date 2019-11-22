@@ -36,8 +36,10 @@ wget http://media.sundog-soft.com/AWSBigData/httpd.zip
 unzip httpd.zip
 mv httpd /var/log/httpd
 
+# remove the original agent config and replace with the custom version
+rm /etc/aws-kinesis/agent.json
 # get the kinesis agent config file
-wget --directory-prefix=/stc/aws-kinesis/ https://raw.githubusercontent.com/tkeech1/aws_bd/master/agent.json
+wget --directory-prefix=/etc/aws-kinesis/ https://raw.githubusercontent.com/tkeech1/aws_bd/master/agent.json
 # configure the Kinesis agent
 # remove the Kinesis Data Streams configuration from the agent.json file
 #sed -i '7,11d' /etc/aws-kinesis/agent.json
@@ -48,9 +50,9 @@ wget --directory-prefix=/stc/aws-kinesis/ https://raw.githubusercontent.com/tkee
 # configure the Kinesis Firehose target
 #sed -i -e 's/yourdeliverystream/PurchaseLogs/g' /etc/aws-kinesis/agent.json
 # enable the Kinesis agent then set it to auto-start
+sleep 600
 service aws-kinesis-agent start
 chkconfig aws-kinesis-agent on
-sleep 60
 
 # run the LogGenerator to produce some data to the stream
-while true; do python LogGenerator.py 100; sleep 10; done
+while true; do python LogGenerator.py 10; sleep 10; done
