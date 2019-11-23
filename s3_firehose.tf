@@ -57,14 +57,6 @@ resource "aws_iam_role_policy" "firehose_s3_role_policy" {
     {
         "Sid": "",
         "Effect": "Allow",
-        "Action": "es:*",
-        "Resource": [
-          "arn:aws:es:${var.region}:${data.aws_caller_identity.current.account_id}:domain/${aws_elasticsearch_domain.es[0].domain_name}",
-          "arn:aws:es:${var.region}:${data.aws_caller_identity.current.account_id}:domain/${aws_elasticsearch_domain.es[0].domain_name}/*"]
-    },
-        {
-        "Sid": "",
-        "Effect": "Allow",
         "Action": "lambda:*",
         "Resource": ["*"]
     }
@@ -84,44 +76,7 @@ resource "aws_kinesis_firehose_delivery_stream" "PurchaseLogs_s3_firehose_stream
   }
 }
 
-# create the kinesis firehose for writing to elastic search
-resource "aws_kinesis_firehose_delivery_stream" "weblogs_firehose_stream" {
-  name        = var.kinesis_firehose_weblogs_name
-  destination = "elasticsearch"
-  s3_configuration {
-    role_arn           = "${aws_iam_role.firehose_s3_role.arn}"
-    bucket_arn         = "${aws_s3_bucket.firehose_elasticsearch_destination_bucket.arn}"
-    buffer_size        = 10
-    buffer_interval    = 400
-    compression_format = "GZIP"
-  }
-  elasticsearch_configuration {
-    domain_arn = "${aws_elasticsearch_domain.es[0].arn}"
-    role_arn   = "${aws_iam_role.firehose_s3_role.arn}"
-    index_name = var.kinesis_firehose_weblogs_name
-    type_name  = var.kinesis_firehose_weblogs_name
-    processing_configuration {
-      enabled = "true"
-      processors {
-        type = "Lambda"
-        parameters {
-          parameter_name  = "LambdaArn"
-          parameter_value = "${aws_lambda_function.lambda_weblogs_processor.arn}:$LATEST"
-        }
-      }
-    }
-    cloudwatch_logging_options {
-      enabled         = true
-      log_group_name  = "${aws_cloudwatch_log_group.weblog_firehose_processor_log.name}"
-      log_stream_name = "weblogs_firehose_stream"
-    }
-  }
-}
 
-resource "aws_cloudwatch_log_group" "weblog_firehose_processor_log" {
-  name              = "/aws/firehose/weblog"
-  retention_in_days = 14
-}
 
 resource "aws_kinesis_stream" "CadabraOrders_s3_kinesis_data_stream" {
   name        = var.kinesis_datastream_name

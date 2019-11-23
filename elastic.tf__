@@ -1,0 +1,205 @@
+resource "aws_elasticsearch_domain" "es" {
+  count = 1
+
+  domain_name           = var.elasticsearch_domain_name
+  elasticsearch_version = "6.4"
+
+  cluster_config {
+    instance_type            = "m4.large.elasticsearch"
+    instance_count           = 1
+    dedicated_master_enabled = false
+    dedicated_master_count   = 0
+    zone_awareness_enabled   = false
+  }
+
+  ebs_options {
+    ebs_enabled = true
+    volume_size = 10
+  }
+
+  encrypt_at_rest {
+    enabled = false
+  }
+
+  node_to_node_encryption {
+    enabled = false
+  }
+
+  tags = {
+    Domain = "TestDomain"
+  }
+}
+
+data "aws_iam_policy_document" "es_management_access" {
+  count = 1
+
+  statement {
+    actions = [
+      "es:*",
+    ]
+
+    resources = [
+      aws_elasticsearch_domain.es[0].arn,
+      "${aws_elasticsearch_domain.es[0].arn}/*",
+    ]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["*"]
+    }
+
+    condition {
+      test     = "IpAddress"
+      variable = "aws:SourceIp"
+      values   = [var.client_ip_address]
+    }
+  }
+}
+
+resource "aws_elasticsearch_domain_policy" "es_management_access" {
+  domain_name     = "cadabra"
+  access_policies = data.aws_iam_policy_document.es_management_access[0].json
+}
+
+# create permissions to allow firehose to read/write and list objects in the S3 bucket
+resource "aws_iam_role_policy" "firehose_s3_role_policy" {
+  name   = "firehose_s3_role_policy"
+  role   = "${aws_iam_role.firehose_s3_role.id}"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [    
+    {
+        "Sid": "",
+        "Effect": "Allow",
+        "Action": ["s3:ListBucket"],
+        "Resource": [
+          "arn:aws:s3:::${aws_s3_bucket.firehose_destination_bucket.bucket}",
+          "arn:aws:s3:::${aws_s3_bucket.firehose_elasticsearch_destination_bucket.bucket}"
+        ]
+    },
+    {
+        "Sid": "",
+        "Effect": "Allow",
+        "Action": "s3:*Object",
+        "Resource": ["arn:aws:s3:::${aws_s3_bucket.firehose_destination_bucket.bucket}/*"]
+    },
+    {
+        "Sid": "",
+        "Effect": "Allow",
+        "Action": "es:*",
+        "Resource": [
+          "arn:aws:es:${var.region}:${data.aws_caller_identity.current.account_id}:domain/${aws_elasticsearch_domain.es[0].domain_name}",
+          "arn:aws:es:${var.region}:${data.aws_caller_identity.current.account_id}:domain/${aws_elasticsearch_domain.es[0].domain_name}/*"]
+    },
+        {
+        "Sid": "",
+        "Effect": "Allow",
+        "Action": "lambda:*",
+        "Resource": ["*"]
+    }
+  ]
+}
+EOF
+}
+
+# create the kinesis firehose for writing to elastic search
+resource "aws_kinesis_firehose_delivery_stream" "weblogs_firehose_stream" {
+  name        = var.kinesis_firehose_weblogs_name
+  destination = "elasticsearch"
+  s3_configuration {
+    role_arn           = "${aws_iam_role.firehose_s3_role.arn}"
+    bucket_arn         = "${aws_s3_bucket.firehose_elasticsearch_destination_bucket.arn}"
+    buffer_size        = 10
+    buffer_interval    = 400
+    compression_format = "GZIP"
+  }
+  elasticsearch_configuration {
+    domain_arn = "${aws_elasticsearch_domain.es[0].arn}"
+    role_arn   = "${aws_iam_role.firehose_s3_role.arn}"
+    index_name = var.kinesis_firehose_weblogs_name
+    type_name  = var.kinesis_firehose_weblogs_name
+    processing_configuration {
+      enabled = "true"
+      processors {
+        type = "Lambda"
+        parameters {
+          parameter_name  = "LambdaArn"
+          parameter_value = "${aws_lambda_function.lambda_weblogs_processor.arn}:$LATEST"
+        }
+      }
+    }
+    cloudwatch_logging_options {
+      enabled         = true
+      log_group_name  = "${aws_cloudwatch_log_group.weblog_firehose_processor_log.name}"
+      log_stream_name = "weblogs_firehose_stream"
+    }
+  }
+}
+
+resource "aws_cloudwatch_log_group" "weblog_firehose_processor_log" {
+  name              = "/aws/firehose/weblog"
+  retention_in_days = 14
+}
+
+# Policy to give permissions to write records to the firehose endpoint
+resource "aws_iam_role_policy" "firehose_policy" {
+  name   = "firehose_policy"
+  role   = "${aws_iam_role.ec2role.id}"
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "firehose:PutRecord",
+        "firehose:PutRecordBatch"
+      ],
+      "Effect": "Allow",
+      "Resource": 
+        ["arn:aws:firehose:${var.region}:${data.aws_caller_identity.current.account_id}:deliverystream/${aws_kinesis_firehose_delivery_stream.PurchaseLogs_s3_firehose_stream.name}",
+        "arn:aws:firehose:${var.region}:${data.aws_caller_identity.current.account_id}:deliverystream/${aws_kinesis_firehose_delivery_stream.weblogs_firehose_stream.name}"]
+    },
+    { 
+      "Action": [
+        "cloudwatch:PutMetricData"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"      
+    }
+  ]
+}
+EOF
+}
+
+# allows a lambda to log to CloudWatch
+resource "aws_iam_policy" "lambda_weblogs" {
+  name        = "lambda_weblogs"
+  path        = "/"
+  description = "IAM policy for processing weblogs from a firehose"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "firehose:*",
+        "es:*"
+      ],
+      "Resource": [
+        "arn:aws:firehose:${var.region}:${data.aws_caller_identity.current.account_id}:deliverystream/${aws_kinesis_firehose_delivery_stream.weblogs_firehose_stream.name}",
+        "arn:aws:es:${var.region}:${data.aws_caller_identity.current.account_id}:domain/${aws_elasticsearch_domain.es[0].domain_name}"
+      ],
+      "Effect": "Allow"
+    }
+  ]
+}
+EOF
+}
+
+# attaches the sns policy to the lambda role
+resource "aws_iam_role_policy_attachment" "lambda_weblogs" {
+  role       = "${aws_iam_role.lambda_role.name}"
+  policy_arn = "${aws_iam_policy.lambda_weblogs.arn}"
+}
