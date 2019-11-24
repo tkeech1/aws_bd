@@ -11,6 +11,9 @@ plan:
 apply:
 	terraform init; terraform fmt; terraform apply -auto-approve -var="aws_access_key_id=${AWS_ACCESS_KEY_ID}" -var="aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" -var="cell_phone_number=${CELL_PHONE_NUMBER}" -var="client_ip_address=${IP_ADDRESS}"
 
+start-glue-crawler:
+	~/.local/bin/aws glue start-crawler --name order_data
+
 start-kinesis-analytics:
 	~/.local/bin/aws kinesisanalytics start-application --application-name TransactionRateMonitor --input-configurations Id=1.1,InputStartingPositionConfiguration={InputStartingPosition=LAST_STOPPED_POINT}
 

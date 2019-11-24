@@ -32,9 +32,9 @@ chmod a+x LogGenerator.py
 mkdir /var/log/cadabra
 
 # download the http log files software - these are used to populate ElasticSearch
-wget http://media.sundog-soft.com/AWSBigData/httpd.zip
-unzip httpd.zip
-mv httpd /var/log/httpd
+#wget http://media.sundog-soft.com/AWSBigData/httpd.zip
+#unzip httpd.zip
+#mv httpd /var/log/httpd
 
 # remove the original agent config and replace with the custom version
 rm /etc/aws-kinesis/agent.json
@@ -50,7 +50,7 @@ wget --directory-prefix=/etc/aws-kinesis/ https://raw.githubusercontent.com/tkee
 # configure the Kinesis Firehose target
 #sed -i -e 's/yourdeliverystream/PurchaseLogs/g' /etc/aws-kinesis/agent.json
 # enable the Kinesis agent then set it to auto-start
-sleep 600
+sleep 60
 service aws-kinesis-agent start
 chkconfig aws-kinesis-agent on
 
