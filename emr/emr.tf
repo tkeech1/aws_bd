@@ -4,6 +4,10 @@ variable "region" {
 variable "public_key_name" {
   type = string
 }
+variable "ip_address" {
+  type = string
+}
+
 
 provider "aws" {
   region = var.region
@@ -87,7 +91,8 @@ resource "aws_security_group" "allow_access" {
     protocol  = "tcp"
 
     # we do not recommend opening your cluster to 0.0.0.0/0
-    cidr_blocks = ["98.115.99.177/32"]
+    # use the following format "1.1.1.1/32"
+    cidr_blocks = [var.ip_address]
   }
 
   egress {

@@ -4,9 +4,19 @@ AWS_SECRET_ACCESS_KEY?=AWS_SECRET_ACCESS_KEY
 AWS_REGION?=AWS_REGION
 CELL_PHONE_NUMBER?=CELL_PHONE_NUMBER
 IP_ADDRESS?=IP_ADDRESS
+VPC_ID?=VPC_ID
 
 plan:
 	terraform init; terraform validate; terraform plan -var="aws_access_key_id=${AWS_ACCESS_KEY_ID}" -var="aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" -var="cell_phone_number=${CELL_PHONE_NUMBER}" -var="client_ip_address=${IP_ADDRESS}"
+
+plan-athena:
+	cd athena; terraform init; terraform validate; terraform plan -var="client_ip_address=${IP_ADDRESS}" -var="vpc_id=${VPC_ID}"
+
+apply-athena:
+	cd athena; terraform init; terraform fmt; terraform apply -auto-approve -var="client_ip_address=${IP_ADDRESS}" -var="vpc_id=${VPC_ID}"
+
+destroy-athena:
+	cd athena; terraform init; terraform destroy -auto-approve -var="client_ip_address=${IP_ADDRESS}" -var="vpc_id=${VPC_ID}"
 
 apply:
 	terraform init; terraform fmt; terraform apply -auto-approve -var="aws_access_key_id=${AWS_ACCESS_KEY_ID}" -var="aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}" -var="cell_phone_number=${CELL_PHONE_NUMBER}" -var="client_ip_address=${IP_ADDRESS}"

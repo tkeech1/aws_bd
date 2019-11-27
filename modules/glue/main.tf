@@ -7,10 +7,6 @@ resource "aws_glue_crawler" "glue_crawler" {
   name          = var.glue_crawler_name
   role          = "${aws_iam_role.glue_role.arn}"
 
-  /*s3_target {
-    path = "s3://${var.bucket_name}"
-  }*/
-
   catalog_target {
     database_name = "${aws_glue_catalog_database.aws_glue_catalog_database.name}"
     tables = ["${aws_glue_catalog_table.order_data_table.name}"]
@@ -66,7 +62,6 @@ resource "aws_glue_catalog_table" "order_data_table" {
         "field.delim"            = ","
       }
     }
-
 
     columns {
       name = "InvoiceNo"
